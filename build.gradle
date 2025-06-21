@@ -24,6 +24,7 @@ dependencies {
 	testImplementation 'junit:junit:4.12'
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
 
 group = 'com.example'
