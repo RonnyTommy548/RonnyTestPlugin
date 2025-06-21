@@ -33,9 +33,10 @@ public class ExamplePlugin extends Plugin
 	private ExampleConfig config;
 
 	private NPC zulrah = null;
+	private int[][] collisionMap = null;
 	private WorldPoint playerLocation = null;
-	public static final int ZULRAH_DEATH_ANIM = 5804;
-	public static final String ZULRAH_NAME = "Zulrah";
+	private static final int ZULRAH_DEATH_ANIM = 5804;
+	private static final String ZULRAH_NAME = "Zulrah";
 
 	@Inject
 	private LootTileOverlay lootTileOverlay;
@@ -60,23 +61,24 @@ public class ExamplePlugin extends Plugin
 
 	@Subscribe
 	public void onGameTick(GameTick event) {
-		playerLocation = client.getLocalPlayer().getWorldLocation();
 		WorldView wv = client.getTopLevelWorldView();
+		playerLocation = client.getLocalPlayer().getWorldLocation();
 
-		if (zulrah != null && playerLocation != null) {
-			zulrah = wv.npcs().byIndex(zulrah.getIndex());
-			if (zulrah == null) {
-				currentLootTile = null;
-				return;
-			}
-			int[][] flags = getCollisionMap();
-			int baseX = client.getTopLevelWorldView().getBaseX();
-			int baseY = client.getTopLevelWorldView().getBaseY();
-			WorldPoint zulrahSW = zulrah.getWorldLocation();
-			currentLootTile = LootPlacementAlgo.getLootDestinationTile(zulrahSW, playerLocation, flags, baseX, baseY);
-		} else {
-			currentLootTile = null;
+		if (zulrah == null || playerLocation == null || collisionMap == null) {
+			return;
 		}
+
+		zulrah = wv.npcs().byIndex(zulrah.getIndex());
+		if (zulrah == null) {
+			// zulrah finished dying
+			return;
+		}
+		
+		int baseX = client.getTopLevelWorldView().getBaseX();
+		int baseY = client.getTopLevelWorldView().getBaseY();
+		WorldPoint zulrahSW = zulrah.getWorldLocation();
+		currentLootTile = LootPlacementAlgo.getLootDestinationTile(zulrahSW, playerLocation, collisionMap, baseX, baseY);
+
 	}
 
 	@Subscribe
@@ -92,15 +94,24 @@ public class ExamplePlugin extends Plugin
 
 		if (npcName.equals(ZULRAH_NAME)) {
 			zulrah = npc;
+			collisionMap = getCollisionMap();
 			System.out.println("Zulrah spawned");
 		}
 	}
 
-	public int[][] getCollisionMap() {
+	public int[][] getCollisionMap()
+	{
 		CollisionData collisions = client.getTopLevelWorldView().getCollisionMaps()[0];
-		int[][] flags = collisions.getFlags();
-
-		// Invisible walls
+		int[][] originalFlags = collisions.getFlags();
+	
+		// Deep copy of collision flags
+		int[][] flags = new int[originalFlags.length][];
+		for (int x = 0; x < originalFlags.length; x++)
+		{
+			flags[x] = originalFlags[x].clone();
+		}
+	
+		// Add invisible walls to the *copied* map
 		int[][] invisibleWallCoords = {
 			{52, 52},
 			{56, 55},
@@ -109,17 +120,20 @@ public class ExamplePlugin extends Plugin
 			{46, 56},
 			{46, 59}
 		};
-
-		for (int[] coord : invisibleWallCoords) {
+	
+		for (int[] coord : invisibleWallCoords)
+		{
 			int x = coord[0];
 			int y = coord[1];
-			if (x >= 0 && x < flags.length && y >= 0 && y < flags[x].length) {
+			if (x >= 0 && x < flags.length && y >= 0 && y < flags[x].length)
+			{
 				flags[x][y] |= CollisionDataFlag.BLOCK_MOVEMENT_FULL;
 			}
 		}
-
+	
 		return flags;
 	}
+	
 
 	public void printCollisionMapWithLoot(int[][] flags)
 	{

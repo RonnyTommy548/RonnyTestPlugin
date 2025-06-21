@@ -58,64 +58,88 @@ public class LootPlacementAlgo {
     }
 
     public static WorldPoint getLootDestinationTile(WorldPoint zulrah, WorldPoint player, int[][] collisionMap, int baseX, int baseY)
-    {
-        // Use Zulrah's center tile (2 tiles NE of SW)
-        int zulrahX = zulrah.getX() + 2;
-        int zulrahY = zulrah.getY() + 2;
+{
+	// Use Zulrah's center tile (2 tiles NE of SW)
+	int zulrahX = zulrah.getX() + 2;
+	int zulrahY = zulrah.getY() + 2;
 
-        int dx = zulrahX - player.getX();
-        int dy = zulrahY - player.getY();
+	int dx = zulrahX - player.getX();
+	int dy = zulrahY - player.getY();
 
-        LootDirection lootDirection = LootPlacementAlgo.getLootDirection(dx, dy);
-        AbsoluteDirection absoluteDirection = LootPlacementAlgo.resolveLootDirection(dx, dy, lootDirection);
+	LootDirection lootDirection = LootPlacementAlgo.getLootDirection(dx, dy);
+	AbsoluteDirection absoluteDirection = LootPlacementAlgo.resolveLootDirection(dx, dy, lootDirection);
 
-        int startX = player.getX() - baseX;
-        int startY = player.getY() - baseY;
+	int currX = player.getX() - baseX;
+	int currY = player.getY() - baseY;
+	int lastValidDiagonalX = currX;
+	int lastValidDiagonalY = currY;
 
-        int maxSteps = 20; // Reasonable cap to avoid infinite loops
-        int stepX = 0;
-        int stepY = 0;
+	int maxSteps = 20;
 
-        switch (absoluteDirection) {
-            case NORTH:      stepY = 1;  break;
-            case SOUTH:      stepY = -1; break;
-            case EAST:       stepX = 1;  break;
-            case WEST:       stepX = -1; break;
-            case NORTHEAST:  stepX = 1;  stepY = 1;  break;
-            case NORTHWEST:  stepX = -1; stepY = 1;  break;
-            case SOUTHEAST:  stepX = 1;  stepY = -1; break;
-            case SOUTHWEST:  stepX = -1; stepY = -1; break;
-        }
+	if ((collisionMap[currX][currY] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
+		return new WorldPoint(currX + baseX, currY + baseY, player.getPlane());
+	}
 
-        int currX = startX;
-        int currY = startY;
+	int stepX = 0;
+	int stepY = 0;
 
-        // Terminate immediately if starting inside wall
-        if ((collisionMap[currX][currY] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
-            return new WorldPoint(currX + baseX, currY + baseY, player.getPlane());
-        }
+	switch (absoluteDirection) {
+		case NORTH:      stepY = 1;  break;
+		case SOUTH:      stepY = -1; break;
+		case EAST:       stepX = 1;  break;
+		case WEST:       stepX = -1; break;
+		case NORTHEAST:  stepX = 1;  stepY = 1;  break;
+		case NORTHWEST:  stepX = -1; stepY = 1;  break;
+		case SOUTHEAST:  stepX = 1;  stepY = -1; break;
+		case SOUTHWEST:  stepX = -1; stepY = -1; break;
+	}
 
-        for (int i = 0; i < maxSteps; i++) {
-            currX += stepX;
-            currY += stepY;
-    
-            // Stop if out of bounds
-            if (currX < 0 || currY < 0 || currX >= collisionMap.length || currY >= collisionMap[0].length) {
-                break;
-            }
-    
-            int flag = collisionMap[currX][currY];
-    
-            // Stop if we hit a full-blocking tile
-            if ((flag & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
-                currX -= stepX;
-                currY -= stepY;
-                break;
-            }
-        }
+	if (lootDirection == LootDirection.CARDINAL)
+	{
+		// Cardinal stepping logic stays unchanged
+		for (int i = 0; i < maxSteps; i++) {
+			currX += stepX;
+			currY += stepY;
 
-        // Return the world coordinate of the final tile
-        return new WorldPoint(currX + baseX, currY + baseY, player.getPlane());
-    }
+			if (currX < 0 || currY < 0 || currX >= collisionMap.length || currY >= collisionMap[0].length) {
+				break;
+			}
+
+			int flag = collisionMap[currX][currY];
+			if ((flag & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
+				currX -= stepX;
+				currY -= stepY;
+				break;
+			}
+		}
+		return new WorldPoint(currX + baseX, currY + baseY, player.getPlane());
+	}
+	else
+	{
+		// Diagonal zig-zag stepping: start with N/S step, then alternate with E/W
+		for (int i = 0; i < maxSteps; i++) {
+			// Step in Y (N/S)
+			currY += stepY;
+			if (currX < 0 || currY < 0 || currX >= collisionMap.length || currY >= collisionMap[0].length
+				|| (collisionMap[currX][currY] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
+				break;
+			}
+
+			// Step in X (E/W)
+			currX += stepX;
+			if (currX < 0 || currY < 0 || currX >= collisionMap.length || currY >= collisionMap[0].length
+				|| (collisionMap[currX][currY] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0) {
+				break;
+			}
+
+			// Valid full diagonal step (Y then X)
+			lastValidDiagonalX = currX;
+			lastValidDiagonalY = currY;
+		}
+
+		return new WorldPoint(lastValidDiagonalX + baseX, lastValidDiagonalY + baseY, player.getPlane());
+	}
+}
+
 
 }
