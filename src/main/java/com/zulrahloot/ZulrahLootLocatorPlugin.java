@@ -31,9 +31,6 @@ public class ZulrahLootLocatorPlugin extends Plugin
 	@Inject
 	private Client client;
 
-	@Inject
-	private ZulrahLootLocatorConfig config;
-
 	@Getter
 	private NPC zulrah = null;
 	private int[][] collisionMap = null;
