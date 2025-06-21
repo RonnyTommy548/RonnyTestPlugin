@@ -6,7 +6,9 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import javax.inject.Inject;
+
 import net.runelite.api.Client;
+import net.runelite.api.NPC;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.Perspective;
@@ -19,12 +21,14 @@ public class ZulrahLootLocatorOverlay extends Overlay
 {
 	private final Client client;
 	private final ZulrahLootLocatorPlugin plugin;
+	private final ZulrahLootLocatorConfig config;
 
 	@Inject
-	public ZulrahLootLocatorOverlay(Client client, ZulrahLootLocatorPlugin plugin)
+	public ZulrahLootLocatorOverlay(Client client, ZulrahLootLocatorPlugin plugin, ZulrahLootLocatorConfig config)
 	{
 		this.client = client;
 		this.plugin = plugin;
+		this.config = config;
 
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
@@ -33,8 +37,12 @@ public class ZulrahLootLocatorOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		WorldPoint lootTile = plugin.getCurrentLootTile();
+		if (!shouldRender())
+		{
+			return null;
+		}
 
+		WorldPoint lootTile = plugin.getCurrentLootTile();
 		if (lootTile == null || client.getPlane() != lootTile.getPlane())
 		{
 			return null;
@@ -52,14 +60,45 @@ public class ZulrahLootLocatorOverlay extends Overlay
 			return null;
 		}
 
+		Color baseColor = config.lootTileColor();
+		int baseAlpha = baseColor.getAlpha();
+		
+		int finalAlpha = baseAlpha;
+		
+		if (plugin.isZulrahDying())
+		{
+			int clientTicksElapsed = client.getGameCycle() - plugin.getFadeStartClientTick();
+			int fadeClientTicks = ZulrahLootLocatorPlugin.ZULRAH_DEATH_TICKS * 30;
+			if (clientTicksElapsed < fadeClientTicks)
+			{
+				float fadeRatio = 1f - (clientTicksElapsed / (float) fadeClientTicks);
+				finalAlpha = Math.round(baseAlpha * fadeRatio);
+			}
+			else
+			{	
+				return null; // Fully faded out
+			}
+		}
+		
+		Color borderColor = new Color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), finalAlpha);
+		Color fillColor = new Color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), finalAlpha);
+		
+
 		OverlayUtil.renderPolygon(
 			graphics,
 			poly,
-			Color.RED,
-			new Color(255, 0, 0, 50), // translucent fill
+			borderColor,
+			fillColor,
 			new BasicStroke(2)
 		);
 
 		return null;
+	}
+
+	private boolean shouldRender()
+	{
+		boolean zulrahUnderThreshold = ((float) plugin.getLastZulrahHealthRatio() / (float) plugin.getLastZulrahHealthScale()) * ZulrahLootLocatorPlugin.ZULRAH_MAX_HP <= config.hpThreshold();
+
+		return plugin.isZulrahDying() || zulrahUnderThreshold;
 	}
 }

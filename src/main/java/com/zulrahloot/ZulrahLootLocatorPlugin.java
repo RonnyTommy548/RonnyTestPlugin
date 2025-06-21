@@ -34,11 +34,18 @@ public class ZulrahLootLocatorPlugin extends Plugin
 	@Inject
 	private ZulrahLootLocatorConfig config;
 
+	@Getter
 	private NPC zulrah = null;
 	private int[][] collisionMap = null;
 	private WorldPoint playerLocation = null;
-	private static final int ZULRAH_DEATH_ANIM = 5804;
-	private static final String ZULRAH_NAME = "Zulrah";
+	@Getter
+	private int lastZulrahHealthRatio = -1;
+	@Getter
+	private int lastZulrahHealthScale = -1;
+	public static final int ZULRAH_DEATH_ANIM = 5804;
+	public static final int ZULRAH_DEATH_TICKS = 7;
+	public static final int ZULRAH_MAX_HP = 500;
+	public static final String ZULRAH_NAME = "Zulrah";
 
 	@Inject
 	private ZulrahLootLocatorOverlay lootTileOverlay;
@@ -47,6 +54,12 @@ public class ZulrahLootLocatorPlugin extends Plugin
 	@Getter
 	private WorldPoint currentLootTile;
 
+	private int tickCount = 0;
+	@Getter
+	private int fadeStartClientTick = -1;
+	@Getter
+	private boolean isZulrahDying = false;
+	
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -63,24 +76,35 @@ public class ZulrahLootLocatorPlugin extends Plugin
 
 	@Subscribe
 	public void onGameTick(GameTick event) {
-		WorldView wv = client.getTopLevelWorldView();
 		playerLocation = client.getLocalPlayer().getWorldLocation();
-
 		if (zulrah == null || playerLocation == null || collisionMap == null) {
-			return;
-		}
-
-		zulrah = wv.npcs().byIndex(zulrah.getIndex());
-		if (zulrah == null) {
-			// zulrah finished dying?
+			handleFade();
 			return;
 		}
 		
+		WorldView wv = client.getTopLevelWorldView();
+		zulrah = wv.npcs().byIndex(zulrah.getIndex());
+		if (zulrah == null) {
+			// Zulrah finished dying
+			return;
+		}
+		
+		// Zulrah is alive
 		int baseX = client.getTopLevelWorldView().getBaseX();
 		int baseY = client.getTopLevelWorldView().getBaseY();
 		WorldPoint zulrahSW = zulrah.getWorldLocation();
 		currentLootTile = LootPlacement.getLootDestinationTile(zulrahSW, playerLocation, collisionMap, baseX, baseY);
 
+		if (zulrah.getHealthRatio() > -1) {
+			lastZulrahHealthRatio = zulrah.getHealthRatio();
+		}
+		if (zulrah.getHealthScale() > -1) {
+			lastZulrahHealthScale = zulrah.getHealthScale();
+		}
+
+		// Cancel fade if it was active
+		isZulrahDying = false;
+		fadeStartClientTick = -1;
 	}
 
 	@Subscribe
@@ -97,6 +121,20 @@ public class ZulrahLootLocatorPlugin extends Plugin
 		if (npcName.equals(ZULRAH_NAME)) {
 			zulrah = npc;
 			collisionMap = getCollisionMap();
+		}
+	}
+
+	private void handleFade() {
+		if (isZulrahDying)
+		{
+			tickCount++;
+
+			if (tickCount >= ZULRAH_DEATH_TICKS)
+			{
+				currentLootTile = null;
+				isZulrahDying = false;
+				tickCount = 0;
+			}
 		}
 	}
 
@@ -141,7 +179,11 @@ public class ZulrahLootLocatorPlugin extends Plugin
 	@Subscribe
 	public void onAnimationChanged(AnimationChanged event) {
 		if (event.getActor().getAnimation() == ZULRAH_DEATH_ANIM) {
+			isZulrahDying = true;
+			fadeStartClientTick = client.getGameCycle();
 			zulrah = null;
+			lastZulrahHealthRatio = -1;
+			lastZulrahHealthScale = -1;
 		}
 	}
 
