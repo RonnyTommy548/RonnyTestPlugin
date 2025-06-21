@@ -1,13 +1,13 @@
-package com.example;
+package com.zulrahloot;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class ZulrahLootLocatorPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(ExamplePlugin.class);
+		ExternalPluginManager.loadBuiltin(ZulrahLootLocatorPlugin.class);
 		RuneLite.main(args);
 	}
 }

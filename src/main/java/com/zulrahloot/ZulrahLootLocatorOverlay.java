@@ -1,4 +1,4 @@
-package com.example;
+package com.zulrahloot;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -15,13 +15,13 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 
-public class LootTileOverlay extends Overlay
+public class ZulrahLootLocatorOverlay extends Overlay
 {
 	private final Client client;
-	private final ExamplePlugin plugin;
+	private final ZulrahLootLocatorPlugin plugin;
 
 	@Inject
-	public LootTileOverlay(Client client, ExamplePlugin plugin)
+	public ZulrahLootLocatorOverlay(Client client, ZulrahLootLocatorPlugin plugin)
 	{
 		this.client = client;
 		this.plugin = plugin;

@@ -1,9 +1,9 @@
-package com.example;
+package com.zulrahloot;
 
 import net.runelite.api.CollisionDataFlag;
 import net.runelite.api.coords.WorldPoint;
 
-public class LootPlacementAlgo {
+public class LootPlacement {
 
     public enum LootDirection {
         DIAGONAL,
@@ -66,8 +66,8 @@ public class LootPlacementAlgo {
 	int dx = zulrahX - player.getX();
 	int dy = zulrahY - player.getY();
 
-	LootDirection lootDirection = LootPlacementAlgo.getLootDirection(dx, dy);
-	AbsoluteDirection absoluteDirection = LootPlacementAlgo.resolveLootDirection(dx, dy, lootDirection);
+	LootDirection lootDirection = LootPlacement.getLootDirection(dx, dy);
+	AbsoluteDirection absoluteDirection = LootPlacement.resolveLootDirection(dx, dy, lootDirection);
 
 	int currX = player.getX() - baseX;
 	int currY = player.getY() - baseY;
