@@ -24,6 +24,6 @@ public interface ZulrahLootLocatorConfig extends Config {
       name = "Zulrah HP Threshold",
       description = "Show loot tile when Zulrah is at or below this HP (0-500)")
   default int hpThreshold() {
-    return 75;
+    return 500;
   }
 }
