@@ -1,6 +1,5 @@
 plugins {
 	id 'java'
-	id 'com.diffplug.spotless' version '6.25.0'
 }
 
 repositories {
@@ -26,13 +25,6 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
-}
-
-spotless {
-    java {
-        googleJavaFormat('1.17.0')
-        target 'src/**/*.java'
-    }
 }
 
 group = 'com.zulrahloot'
